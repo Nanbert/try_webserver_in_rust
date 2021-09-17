@@ -2,9 +2,9 @@ pub struct WebServer{
 }
 
 impl WebServer{
-    pub fn init(&self,_port:&i32,_user:&String,_pass_word:&String,_database_name:&String,
-            _log_write:&i32,_opt_linger:&i32,_trigmode:&i32,_sql_num:&i32,
-            _thread_num:&i32,_close_log:&i32,_actor_model:&i32){
+    pub fn init(&self,_port:&u32,_user:&String,_pass_word:&String,_database_name:&String,
+            _log_write:&u32,_opt_linger:&u32,_trigmode:&u32,_sql_num:&u32,
+            _thread_num:&u32,_close_log:&u32,_actor_model:&u32){
 
     }
     pub fn log_write(&self){
