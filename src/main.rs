@@ -66,11 +66,8 @@ fn main() {
     config.parse_arg(&args);
     
     println!("{:#?}",config);
-    let server = webserver::WebServer::new();
-
     //初始化
-    server.init(&config.port,&user,&passwd,&databasename,&config.logwrite,
-                &config.opt_linger,&config.trigmode,&config.sql_num,&config.thread_num,&config.close_log,&config.actor_model);
+    let server = webserver::WebServer::new(config.port,&user,&passwd,&databasename,config.logwrite, &config.opt_linger,&config.trigmode,&config.sql_num,&config.thread_num,config.close_log,&config.actor_model);
 
     //日志
     server.log_write();
