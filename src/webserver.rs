@@ -10,11 +10,11 @@ impl WebServer{
         if 0==self.m_close_log{
             if 1 == self.m_log_write{
                 //此刻初始化一个log变量，用共享变量初始化,传递不同的参数即可
-                log::Log::new("ServerLog",self.m_close_log,2000,800000,800);
+                let logObj=log::Log::new("ServerLog",self.m_close_log,2000,800);
             }
             else{
                 //同上
-                log::Log::new("ServerLog",self.m_close_log,2000,800000,800);
+                let logObj=log::Log::new("ServerLog",self.m_close_log,2000,0);
             }
         }
     }
