@@ -1,4 +1,8 @@
 mod log;
+use std::time::Duration;
+use std::io::Write;
+use std::thread;
+use std::sync::{Arc,Mutex};
 pub struct WebServer{
     m_port:u32,
     m_close_log:u32,
@@ -6,11 +10,29 @@ pub struct WebServer{
 }
 
 impl WebServer{
-    pub fn log_write(&self){
+    pub fn log_write(&mut self){
         if 0==self.m_close_log{
             if 1 == self.m_log_write{
                 //此刻初始化一个log变量，用共享变量初始化,传递不同的参数即可
-                let logObj=log::Log::new("ServerLog",self.m_close_log,2000,800);
+                let mut logObj=log::Log::new("ServerLog",self.m_close_log,2000,800);
+                logObj.write_log(2,"HELLO_1");
+                logObj.write_log(2,"HELLO_2");
+                logObj.write_log(2,"HELLO_3");
+                logObj.write_log(2,"HELLO_4");
+                logObj.write_log(2,"HELLO_5");
+                logObj.write_log(2,"HELLO_6");
+                logObj.write_log(2,"HELLO_7");
+                logObj.write_log(2,"HELLO_8");
+                logObj.write_log(2,"HELLO_9");
+                logObj.write_log(2,"HELLO_10");
+                logObj.write_log(2,"HELLO_11");
+                logObj.write_log(2,"HELLO_12");
+                logObj.write_log(2,"HELLO_13");
+                logObj.write_log(2,"HELLO_14");
+                logObj.write_log(2,"HELLO_15");
+                logObj.write_log(2,"HELLO_16");
+                logObj.create_handle();
+                logObj.m_handler.unwrap().join().unwrap();
             }
             else{
                 //同上
