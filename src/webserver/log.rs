@@ -54,6 +54,7 @@ impl Log{
             let mut item=String::from("");
             //let tmpdeque_pointer=tmpdeque.lock().unwrap();
        //     println!("what the outspawn fuck");
+       //   //这里在while条件里解锁很关键,在外面,它会一直持有锁
             while tmpdeque.lock().unwrap().pop(&mut item)
             {
         //        println!("thread is looping");
