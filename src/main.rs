@@ -4,8 +4,8 @@ use clap::{Arg,App};
 
 fn main() {
     //需要修改的数据库信息,登录名,密码,库名
-    let user = String::from("root");
-    let passwd = String::from("root");
+    let user = String::from("nanbert");
+    let passwd = String::from("nan");
     let databasename = String::from("db");
 
     //命令行解析
@@ -67,7 +67,7 @@ fn main() {
     
     println!("{:#?}",config);
     //初始化
-    let mut server = webserver::WebServer::new(config.port,&user,&passwd,&databasename,config.logwrite, &config.opt_linger,&config.trigmode,&config.sql_num,&config.thread_num,config.close_log,&config.actor_model);
+    let mut server = webserver::WebServer::new(config.port,user,passwd,databasename,config.logwrite, &config.opt_linger,&config.trigmode,config.sql_num,&config.thread_num,config.close_log,&config.actor_model);
 
     //日志
     server.log_write();

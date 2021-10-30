@@ -17,7 +17,6 @@ impl Drop for BlockDeque{
         }
         self.condproducer_.notify_all();
         self.condconsumer_.notify_all();
-        println!("i am quit!");
     }
 }
 impl BlockDeque{
