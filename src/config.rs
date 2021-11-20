@@ -25,7 +25,7 @@ pub struct Config{
     pub sql_num:usize,
 
     //线程池内的线程数量
-    pub thread_num:u32,
+    pub thread_num:usize,
 
     //是否关闭日志
     pub close_log:u32,
@@ -46,7 +46,7 @@ impl Config{
         //传入数据库连接数量
         self.sql_num = value_t!(args,"sql_num",usize).unwrap_or(8);
         //传入线程数量
-        self.thread_num = value_t!(args,"thread_num",u32).unwrap_or(8);
+        self.thread_num = value_t!(args,"thread_num",usize).unwrap_or(8);
         //传入是否关闭日志
         self.close_log = value_t!(args,"close_log",u32).unwrap_or(0);
         //传入是否关闭日志

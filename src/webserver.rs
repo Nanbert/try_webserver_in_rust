@@ -1,5 +1,6 @@
 mod log;
 mod http_conn;
+mod thread_pool;
 use std::time::Duration;
 use std::io::Write;
 use std::thread;
@@ -17,6 +18,9 @@ pub struct WebServer{
     m_connPool:Option<Pool>,
     logObj:Option<log::Log>,
     users:http_conn::http_conn,
+    //线程池相关
+    m_pool:Option<thread_pool::thread_pool>,
+    m_thread_num:usize,
 }
 
 impl WebServer{
@@ -51,8 +55,8 @@ impl WebServer{
         self.users.initmysql_result(self.m_connPool.as_ref().unwrap());
 
     }
-    pub fn thread_pool(&self){
-
+    pub fn thread_pool(&mut self){
+        self.m_pool=Some(thread_pool::thread_pool::new(self.m_thread_num));   
     }
     pub fn trig_mode(&self){
 
@@ -63,7 +67,7 @@ impl WebServer{
     pub fn event_loop(&self){
 
     }
-    pub fn new(_port:u32,_user:String,_pass_word:String,_database_name:String,_log_write:u32,_opt_linger:&u32,_trigmode:&u32,_sql_num:usize,_thread_num:&u32,_close_log:u32,_actor_model:&u32)->WebServer{
+    pub fn new(_port:u32,_user:String,_pass_word:String,_database_name:String,_log_write:u32,_opt_linger:&u32,_trigmode:&u32,_sql_num:usize,_thread_num:usize,_close_log:u32,_actor_model:&u32)->WebServer{
         WebServer{
             m_port:_port,
             m_close_log:_close_log,
@@ -75,6 +79,8 @@ impl WebServer{
             m_sql_num:_sql_num,
             m_dataBaseName:_database_name,
             users:http_conn::http_conn::new(),
+            m_thread_num:_thread_num,
+            m_pool:None,
         } 
     }
 }
