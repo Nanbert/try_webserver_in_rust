@@ -21,9 +21,10 @@ impl thread_pool{
                     //这锁怎么加阿！！！！！！
                     let mut taskQueue=tasks.lock().unwrap();
                     if(!taskQueue.is_empty()){
-                        let task = taskQueue.front().unwrap();
+                        let task = taskQueue.pop_front().unwrap();
+                        drop(taskQueue);
                         task();
-                        taskQueue.pop_front();
+                        let taskQueue=tasks.lock().unwrap();
                     }
                     else if isClosed{
                         break;
