@@ -21,6 +21,9 @@ pub struct WebServer{
     //线程池相关
     m_pool:Option<thread_pool::thread_pool>,
     m_thread_num:usize,
+    m_CONNTrigmode:u32,
+    m_LISTENTrigmode:u32,
+    m_TRIGMode:u32,
 }
 
 impl WebServer{
@@ -58,8 +61,27 @@ impl WebServer{
     pub fn thread_pool(&mut self){
         self.m_pool=Some(thread_pool::thread_pool::new(self.m_thread_num));   
     }
-    pub fn trig_mode(&self){
-
+    pub fn trig_mode(&mut self){
+        //LT+LT
+        if 0==self.m_TRIGMode{
+            self.m_LISTENTrigmode=0;
+            self.m_CONNTrigmode=0;
+        }
+        //LT+ET
+        else if 1==self.m_TRIGMode{
+            self.m_LISTENTrigmode=0;
+            self.m_CONNTrigmode=1;
+        }
+        //ET+LT
+        else if 2==self.m_TRIGMode{
+            self.m_LISTENTrigmode=1;
+            self.m_CONNTrigmode=0;
+        }
+        //ET+ET
+        else if 3==self.m_TRIGMode{
+            self.m_LISTENTrigmode=1;
+            self.m_CONNTrigmode=1;
+        }
     }
     pub fn event_listen(&self){
 
@@ -67,7 +89,7 @@ impl WebServer{
     pub fn event_loop(&self){
 
     }
-    pub fn new(_port:u32,_user:String,_pass_word:String,_database_name:String,_log_write:u32,_opt_linger:&u32,_trigmode:&u32,_sql_num:usize,_thread_num:usize,_close_log:u32,_actor_model:&u32)->WebServer{
+    pub fn new(_port:u32,_user:String,_pass_word:String,_database_name:String,_log_write:u32,_opt_linger:&u32,_trigmode:u32,_sql_num:usize,_thread_num:usize,_close_log:u32,_actor_model:&u32)->WebServer{
         WebServer{
             m_port:_port,
             m_close_log:_close_log,
@@ -81,6 +103,9 @@ impl WebServer{
             users:http_conn::http_conn::new(),
             m_thread_num:_thread_num,
             m_pool:None,
+            m_CONNTrigmode:0,
+            m_LISTENTrigmode:0,
+            m_TRIGMode:_trigmode,
         } 
     }
 }
