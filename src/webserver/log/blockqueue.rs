@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::sync::{Condvar,Mutex,Arc,MutexGuard};
+use std::sync::{Condvar,Mutex,Arc};
 pub struct BlockDeque{
     deq_:VecDeque<String>,
     capacity_:usize,

@@ -1,3 +1,4 @@
+#[allow(non_camel_case_types)]
 use libc;
 use socket2::{Socket};
 use std::os::unix::io::{AsRawFd};

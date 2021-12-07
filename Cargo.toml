@@ -9,6 +9,7 @@ edition = "2018"
 clap="~2.27.0"
 chrono = "0.4"
 mysql = "*"
-mio = {version="0.8",features=["os-poll","net"]}
-socket2 = "*"
+mio = {version="0.8",features=["os-poll","net","os-ext"]}
+socket2 ={version="*",features=["all"]}
 libc = "0.2"
+once_cell = "1.8.0"

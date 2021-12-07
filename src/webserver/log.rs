@@ -59,7 +59,7 @@ impl Log{
             {
         //        println!("thread is looping");
                 let mut fp=tmpfp.lock().unwrap();
-                (*fp).write(item.as_bytes());
+                (*fp).write(item.as_bytes()).unwrap();
             }
         }));
     }

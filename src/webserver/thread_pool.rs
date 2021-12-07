@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
-use std::sync::{Condvar,Mutex,Arc,MutexGuard};
+use std::sync::{Condvar,Mutex,Arc};
 use std::thread;
-type func = Box<Fn() + Send + Sync >;
+type func = Box<dyn Fn() + Send + Sync >;
 pub struct thread_pool{
     cond:Arc<Condvar>,
     isClosed:bool,
@@ -13,14 +13,14 @@ impl thread_pool{
         let tasks : Arc<Mutex<VecDeque<func>>> = Arc::new(Mutex::new(VecDeque::new()));
         let isClosed=false;
         let cond=Arc::new(Condvar::new());
-        for i in (0 .. threadCount){
+        for i in 0 .. threadCount{
             let tasks = Arc::clone(&tasks);
             let cond=Arc::clone(&cond);
             let handle = thread::spawn(move||{
-                while true{
+                loop{
                     //这锁怎么加阿！！！！！！
                     let mut taskQueue=tasks.lock().unwrap();
-                    if(!taskQueue.is_empty()){
+                    if !taskQueue.is_empty(){
                         let task = taskQueue.pop_front().unwrap();
                         drop(taskQueue);
                         task();
@@ -30,7 +30,7 @@ impl thread_pool{
                         break;
                     }
                     else {
-                        cond.wait(taskQueue);
+                        let guard=cond.wait(taskQueue).unwrap();
                     }
                 }
             });

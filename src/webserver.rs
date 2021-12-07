@@ -2,18 +2,16 @@ mod log;
 mod http_conn;
 mod thread_pool;
 mod timer;
-use std::net::{SocketAddr,IpAddr,Ipv4Addr,TcpListener};
+use std::net::{SocketAddr,IpAddr,Ipv4Addr};
 use socket2::{Socket,Domain,Type};
 use std::time::Duration;
 use mio::{Events,Poll,Interest,Token};
-use mio::net::TcpStream;
-use std::collections;
-use std::io::Write;
-use std::thread;
-use std::sync::{Arc,Mutex};
+use mio::net::{TcpStream,TcpListener};
+use mio::unix::pipe::{self,Receiver,Sender};
 use mysql::*;
-use mysql::prelude::*;
-use libc;
+use core::borrow::Borrow;
+use once_cell::sync::OnceCell;
+pub static M_EPOLLFD :OnceCell<Poll>=OnceCell::new();
 
 const MAX_FD:u32=65536;
 const MAX_EVENT_NUMBER:usize=10000;
@@ -35,10 +33,11 @@ pub struct WebServer{
     m_CONNTrigmode:u32,
     m_LISTENTrigmode:u32,
     m_TRIGMode:u32,
-    m_listenfd:Option<TcpListener>,
+    m_listenfd:TcpListener,
+    m_pipefd:(Sender,Receiver),
     utils:timer::Utils,
     m_OPT_LINGER:u32,
-    m_epollfd: Poll,
+    events: Events,
 }
 
 impl WebServer{
@@ -98,12 +97,32 @@ impl WebServer{
             self.m_CONNTrigmode=1;
         }
     }
-    pub fn event_listen(&mut self){
-        let mut m_listenfd=Socket::new(Domain::IPV4,Type::STREAM,None).unwrap();
-        if 0==self.m_OPT_LINGER{
-            m_listenfd.set_linger(None);
+    pub fn event_listen(&mut self ){
+       //let mut listenStream=TcpStream::connect(self.m_listenfd.as_ref().unwrap().local_addr().unwrap()).unwrap();
+        //epoll创建内核事件表
+        const LISTENTOKEN:Token = Token(0);
+        //mio默认ET模式,可读等价于EPOLLET|EPOLLIN|EPOLLRDHUP,可写等价于EPOLLET|EPOLLOUT,EPOLLONESHOT不可配置
+        M_EPOLLFD.set(Poll::new().unwrap()).unwrap();
+        M_EPOLLFD.get().unwrap().registry().register(&mut self.m_listenfd,LISTENTOKEN,Interest::READABLE).unwrap();
+        //静态变量初始化,这里借用还是复制好阿？？？？？
+        http_conn::M_EPOLLFD.set(M_EPOLLFD.get().unwrap().borrow()).unwrap();
+        const PIPE_RECV: Token = Token(0);
+        const PIPE_SEND: Token = Token(1);
+
+        M_EPOLLFD.get().unwrap().registry().register(&mut self.m_pipefd.0,PIPE_RECV,Interest::READABLE).unwrap();
+        self.m_pipefd.0.set_nonblocking(true).unwrap();
+        self.m_pipefd.1.set_nonblocking(true).unwrap();
+    }
+    pub fn event_loop(&self){
+
+    }
+    pub fn new(_port:u32,_user:String,_pass_word:String,_database_name:String,_log_write:u32,_opt_linger:u32,_trigmode:u32,_sql_num:usize,_thread_num:usize,_close_log:u32,_actor_model:&u32)->WebServer{
+
+        let m_listenfd=Socket::new(Domain::IPV4,Type::STREAM,None).unwrap();
+        if 0==_opt_linger{
+            m_listenfd.set_linger(None).unwrap();
         }
-        else if 1==self.m_OPT_LINGER{
+        else if 1==_opt_linger{
             m_listenfd.set_linger(Some(Duration::new(1,0))).unwrap();
         }
         m_listenfd.set_reuse_address(true).unwrap();
@@ -111,20 +130,10 @@ impl WebServer{
         let address=address.into();
         //Warning: 大小端的问题,htonl()需要考虑吗?
         m_listenfd.bind(&address).unwrap();
+        //直接设置非阻塞
+        m_listenfd.set_nonblocking(true).unwrap();
+
         m_listenfd.listen(5).unwrap();
-        self.m_listenfd = Some(m_listenfd.into());
-        let mut listenStream=TcpStream::connect(self.m_listenfd.as_ref().unwrap().local_addr().unwrap()).unwrap();
-        //epoll创建内核事件表
-        let mut events = Events::with_capacity(MAX_EVENT_NUMBER);
-        const listenToken:Token = Token(0);
-        //mio默认ET模式,可读等价于EPOLLET|EPOLLIN|EPOLLRDHUP,可写等价于EPOLLET|EPOLLOUT,EPOLLONESHOT不可配置
-        self.m_epollfd.registry().register(&mut listenStream,listenToken,Interest::READABLE);
-
-    }
-    pub fn event_loop(&self){
-
-    }
-    pub fn new(_port:u32,_user:String,_pass_word:String,_database_name:String,_log_write:u32,_opt_linger:u32,_trigmode:u32,_sql_num:usize,_thread_num:usize,_close_log:u32,_actor_model:&u32)->WebServer{
         WebServer{
             m_port:_port,
             m_close_log:_close_log,
@@ -143,8 +152,9 @@ impl WebServer{
             m_TRIGMode:_trigmode,
             utils:timer::Utils::new(TIMESLOT),
             m_OPT_LINGER:_opt_linger,
-            m_epollfd: Poll::new().unwrap(),
-            m_listenfd:None,
+            m_listenfd:TcpListener::from_std(m_listenfd.into()),
+            events:Events::with_capacity(MAX_EVENT_NUMBER),
+            m_pipefd:pipe::new().unwrap(),
         } 
     }
 }

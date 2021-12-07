@@ -1,7 +1,9 @@
 use mysql::*;
 use mysql::prelude::*;
 use std::collections::HashMap;
-use crate::webserver::log;
+use once_cell::sync::OnceCell;
+use mio::Poll;
+pub static M_EPOLLFD :OnceCell<&Poll>=OnceCell::new();
 pub struct http_conn{
 
 }
