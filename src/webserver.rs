@@ -2,16 +2,29 @@ mod log;
 mod http_conn;
 mod thread_pool;
 mod timer;
+
 use std::net::{SocketAddr,IpAddr,Ipv4Addr};
 use socket2::{Socket,Domain,Type};
+
 use std::time::Duration;
+
 use mio::{Events,Poll,Interest,Token};
 use mio::net::{TcpStream,TcpListener};
 use mio::unix::pipe::{self,Receiver,Sender};
+
 use mysql::*;
+
 use core::borrow::Borrow;
 use once_cell::sync::OnceCell;
-pub static M_EPOLLFD :OnceCell<Poll>=OnceCell::new();
+
+use nix::sys::signal::{Signal,SigHandler};
+use nix::unistd::alarm;
+
+use std::io::{Write,Read};
+
+pub static EPOLLFD :OnceCell<Poll>=OnceCell::new();
+pub static mut PIPESEND :OnceCell<Sender>=OnceCell::new();
+pub static mut PIPERECV :OnceCell<Receiver>=OnceCell::new();
 
 const MAX_FD:u32=65536;
 const MAX_EVENT_NUMBER:usize=10000;
@@ -34,7 +47,9 @@ pub struct WebServer{
     m_LISTENTrigmode:u32,
     m_TRIGMode:u32,
     m_listenfd:TcpListener,
-    m_pipefd:(Sender,Receiver),
+    //m_pipefd:(Sender,Receiver),
+    //m_pipeSend:Sender,
+    //m_pipeRecv:Receiver,
     utils:timer::Utils,
     m_OPT_LINGER:u32,
     events: Events,
@@ -102,16 +117,28 @@ impl WebServer{
         //epoll创建内核事件表
         const LISTENTOKEN:Token = Token(0);
         //mio默认ET模式,可读等价于EPOLLET|EPOLLIN|EPOLLRDHUP,可写等价于EPOLLET|EPOLLOUT,EPOLLONESHOT不可配置
-        M_EPOLLFD.set(Poll::new().unwrap()).unwrap();
-        M_EPOLLFD.get().unwrap().registry().register(&mut self.m_listenfd,LISTENTOKEN,Interest::READABLE).unwrap();
+        EPOLLFD.set(Poll::new().unwrap()).unwrap();
+        EPOLLFD.get().unwrap().registry().register(&mut self.m_listenfd,LISTENTOKEN,Interest::READABLE).unwrap();
         //静态变量初始化,这里借用还是复制好阿？？？？？
-        http_conn::M_EPOLLFD.set(M_EPOLLFD.get().unwrap().borrow()).unwrap();
+        http_conn::M_EPOLLFD.set(EPOLLFD.get().unwrap().borrow()).unwrap();
         const PIPE_RECV: Token = Token(0);
         const PIPE_SEND: Token = Token(1);
 
-        M_EPOLLFD.get().unwrap().registry().register(&mut self.m_pipefd.0,PIPE_RECV,Interest::READABLE).unwrap();
-        self.m_pipefd.0.set_nonblocking(true).unwrap();
-        self.m_pipefd.1.set_nonblocking(true).unwrap();
+        unsafe{
+            EPOLLFD.get().unwrap().registry().register(PIPESEND.get_mut().unwrap(),PIPE_RECV,Interest::READABLE).unwrap();
+            timer::SENDER.set(PIPESEND.get().unwrap().by_ref()).unwrap();
+            PIPESEND.get().unwrap().set_nonblocking(true).unwrap();
+            PIPERECV.get().unwrap().set_nonblocking(true).unwrap();
+        }
+      //  M_EPOLLFD.get().unwrap().registry().register(&mut self.m_pipeRecv,PIPE_RECV,Interest::READABLE).unwrap();
+
+        self.utils.addsig(Signal::SIGPIPE,SigHandler::SigIgn,true);
+        self.utils.addsig(Signal::SIGALRM,SigHandler::Handler(timer::sighandler),false);
+        self.utils.addsig(Signal::SIGTERM,SigHandler::Handler(timer::sighandler),false);
+
+        alarm::set(TIMESLOT);
+
+        timer::EPOLLFD.set(EPOLLFD.get().unwrap().borrow()).unwrap();
     }
     pub fn event_loop(&self){
 
@@ -134,6 +161,7 @@ impl WebServer{
         m_listenfd.set_nonblocking(true).unwrap();
 
         m_listenfd.listen(5).unwrap();
+   //     let (_pipeSend,_pipeRecv)=pipe::new().unwrap();
         WebServer{
             m_port:_port,
             m_close_log:_close_log,
@@ -154,7 +182,9 @@ impl WebServer{
             m_OPT_LINGER:_opt_linger,
             m_listenfd:TcpListener::from_std(m_listenfd.into()),
             events:Events::with_capacity(MAX_EVENT_NUMBER),
-            m_pipefd:pipe::new().unwrap(),
+//            m_pipefd:pipe::new().unwrap(),
+ //           m_pipeSend:_pipeSend,
+  //          m_pipeRecv:_pipeRecv,
         } 
     }
 }
